@@ -485,7 +485,17 @@ static void eoi_pirq(struct irq_data *data)
 
 	irq_move_irq(data);
 
-	if (VALID_EVTCHN(evtchn))
+	if (unlikely(irqd_is_setaffinity_pending(data)) &&
+	    likely(!irqd_irq_disabled(data))) {
+		int masked = test_and_set_mask(evtchn);
+
+		clear_evtchn(evtchn);
+
+		irq_move_masked_irq(data);
+
+		if (!masked)
+			unmask_evtchn(evtchn);
+	} else
 		clear_evtchn(evtchn);
 
 	if (pirq_needs_eoi(data->irq)) {
@@ -1362,7 +1372,17 @@ static void ack_dynirq(struct irq_data *data)
 
 	irq_move_irq(data);
 
-	if (VALID_EVTCHN(evtchn))
+	if (unlikely(irqd_is_setaffinity_pending(data)) &&
+	    likely(!irqd_irq_disabled(data))) {
+		int masked = test_and_set_mask(evtchn);
+
+		clear_evtchn(evtchn);
+
+		irq_move_masked_irq(data);
+
+		if (!masked)
+			unmask_evtchn(evtchn);
+	} else
 		clear_evtchn(evtchn);
 }
 
