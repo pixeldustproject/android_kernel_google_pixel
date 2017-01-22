@@ -43,7 +43,7 @@ config ZEN_INTERACTIVE
 
 	    Block Layer Queue Depth........: 128    -> 512
 
-	  --- CPU Scheduler --------------------------------------
+	  --- CPU Scheduler (CFS) --------------------------------
 
 	    Scheduling latency.............:   6    ->   3    ms
 	    Minimal granularity............:   0.75 ->   0.3  ms
