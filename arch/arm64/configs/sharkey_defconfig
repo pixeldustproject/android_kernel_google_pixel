@@ -3098,6 +3098,7 @@ CONFIG_USB_XHCI_PLATFORM=y
 # CONFIG_USB_SL811_HCD is not set
 # CONFIG_USB_R8A66597_HCD is not set
 # CONFIG_USB_HCD_TEST_MODE is not set
+CONFIG_TYPEC_FUSB302=y
 
 #
 # USB Device Class drivers
@@ -3156,7 +3157,7 @@ CONFIG_USB_DWC3_MSM=y
 # CONFIG_DWC3_HOST_USB3_LPM_ENABLE is not set
 # CONFIG_USB_DWC2 is not set
 # CONFIG_USB_CHIPIDEA is not set
-CONFIG_FUSB_30X=y
+# CONFIG_FUSB_30X is not set
 
 #
 # USB port drivers
