@@ -401,15 +401,32 @@ LINUXINCLUDE    := \
 KBUILD_CPPFLAGS := -D__KERNEL__
 
 KBUILD_CFLAGS   := $(GRAPHITE) -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-		   -fno-strict-aliasing -fno-common \
-		   -Werror-implicit-function-declaration \
-		   -Wno-format-security \
-           -fmodulo-sched -fmodulo-sched-allow-regmoves -ffast-math \
-           -funswitch-loops -fpredictive-commoning -fgcse-after-reload \
-		   -fno-delete-null-pointer-checks -Wno-error=bool-compare \
-		   -ftree-loop-vectorize -ftree-loop-distribute-patterns -ftree-slp-vectorize \
-           -fvect-cost-model -ftree-partial-pre -Wno-error=unused-const-variable= -Wno-error=misleading-indentation\
-           -fgcse-lm -fgcse-sm -fsched-spec-load -fsingle-precision-constant -std=gnu89
+                   -Wno-error=misleading-indentation -Wno-error=discarded-array-qualifiers -Wno-error=return-local-addr \
+		           -fno-strict-aliasing -fno-common \
+		           -Werror-implicit-function-declaration \
+		           -Wno-format-security \
+           		   -fmodulo-sched -fmodulo-sched-allow-regmoves -ffast-math \
+                   -funswitch-loops -fpredictive-commoning -fgcse-after-reload \
+		           -fno-delete-null-pointer-checks -Wno-error=bool-compare \
+		           -ftree-loop-vectorize -ftree-loop-distribute-patterns -ftree-slp-vectorize \
+                   -fvect-cost-model -ftree-partial-pre -Wno-error=unused-const-variable= -Wno-error=misleading-indentation\
+                   -fgcse-lm -fgcse-sm -fsched-spec-load -fsingle-precision-constant \
+                   -mcpu=cortex-a57.cortex-a53 -mtune=cortex-a57.cortex-a53 \
+		           -std=gnu89
+
+KBUILD_CFLAGS	+= -march=armv8-a+crc --param l1-cache-size=32 --param l1-cache-line-size=32 --param l2-cache-size=2048 -Wno-unused-const-variable -Wno-error=return-local-addr
+
+# Snapdragon 820 doesn't need 835769/843419 erratum fixes
+# some toolchain enables those fixes automatically, so opt-out
+KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
+KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
+LDFLAGS_vmlinux	+= $(call ld-option, --no-fix-cortex-a53-835769)
+LDFLAGS_vmlinux	+= $(call ld-option, --no-fix-cortex-a53-843419)
+LDFLAGS_MODULE	+= $(call ld-option, --no-fix-cortex-a53-835769)
+LDFLAGS_MODULE	+= $(call ld-option, --no-fix-cortex-a53-843419)
+LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-835769)
+LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-843419)
+
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
@@ -616,6 +633,11 @@ all: vmlinux
 include $(srctree)/arch/$(SRCARCH)/Makefile
 
 KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
+KBUILD_CFLAGS	+= $(call cc-disable-warning,array-bounds,)
+KBUILD_CFLAGS	+= $(call cc-disable-warning,maybe-uninitialized,)
+KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
+KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
+KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
@@ -723,8 +745,6 @@ endif
 KBUILD_CFLAGS	+= -fomit-frame-pointer
 #endif
 #endif
-
-KBUILD_CFLAGS   += $(call cc-option, -fno-var-tracking-assignments)
 
 KBUILD_CFLAGS   += $(call cc-option, -fno-var-tracking-assignments)
 
