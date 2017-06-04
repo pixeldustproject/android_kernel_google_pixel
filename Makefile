@@ -248,7 +248,7 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/x86/ -e s/x86_64/x86/ \
 # "make" in the configured kernel build directory always uses that.
 # Default value for CROSS_COMPILE is not to prefix executables
 # Note: Some architectures assign CROSS_COMPILE in their arch/*/Makefile
-ARCH		?= $(SUBARCH)
+ARCH		?= arm64
 CROSS_COMPILE	?= $(CONFIG_CROSS_COMPILE:"%"=%)
 
 # Architecture as present in compile.h
@@ -295,10 +295,10 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 	  else if [ -x /bin/bash ]; then echo /bin/bash; \
 	  else echo sh; fi ; fi)
 
-HOSTCC       = gcc
-HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -fgcse-las -fgraphite -floop-flatten -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block -pipe -Wno-unused-parameter -Wno-sign-compare -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-value
-HOSTCXXFLAGS = -O3 -fgcse-las -fgraphite -floop-flatten -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block -pipe
+HOSTCC       = ccache gcc
+HOSTCXX      = ccache g++
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
+HOSTCXXFLAGS = -O2
 
 ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
 HOSTCFLAGS  += -Wno-unused-value -Wno-unused-parameter \
@@ -354,7 +354,7 @@ include $(srctree)/scripts/Kbuild.include
 # Make variables (CC, etc...)
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
-CC		= ccache $(CROSS_COMPILE)gcc
+REAL_CC		= ccache $(CROSS_COMPILE)gcc
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -369,16 +369,18 @@ PERL		= perl
 PYTHON		= python
 CHECK		= sparse
 
+# Use the wrapper for the compiler.  This wrapper scans for new
+# warnings and causes the build to stop upon encountering them.
+CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
+
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-GRAPHITE	= -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block -floop-flatten
-FLAGS_MODULE   = $(GRAPHITE)
-AFLAGS_MODULE   = $(GRAPHITE)
-LDFLAGS_MODULE  = --strip-debug
-CFLAGS_KERNEL	= $(GRAPHITE) -fmodulo-sched -fmodulo-sched-allow-regmoves -ftree-loop-vectorize -ftree-loop-distribute-patterns -ftree-slp-vectorize -fvect-cost-model -ftree-partial-pre -fgcse-after-reload -fgcse-lm -fgcse-sm -fsched-spec-load -ffast-math -fsingle-precision-constant -fpredictive-commoning 
-AFLAGS_KERNEL	= $(GRAPHITE)
-CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
-CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
+CFLAGS_MODULE   =
+AFLAGS_MODULE   =
+LDFLAGS_MODULE  =
+CFLAGS_KERNEL	=
+AFLAGS_KERNEL	=
+CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
 
 
 # Use USERINCLUDE when you must reference the UAPI directories only.
@@ -400,32 +402,13 @@ LINUXINCLUDE    := \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := $(GRAPHITE) -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-                   -Wno-error=misleading-indentation -Wno-error=discarded-array-qualifiers -Wno-error=return-local-addr \
-		           -fno-strict-aliasing -fno-common \
-		           -Werror-implicit-function-declaration \
-		           -Wno-format-security \
-           		   -fmodulo-sched -fmodulo-sched-allow-regmoves -ffast-math \
-                   -funswitch-loops -fpredictive-commoning -fgcse-after-reload \
-		           -fno-delete-null-pointer-checks -Wno-error=bool-compare \
-		           -ftree-loop-vectorize -ftree-loop-distribute-patterns -ftree-slp-vectorize \
-                   -fvect-cost-model -ftree-partial-pre -Wno-error=unused-const-variable= -Wno-error=misleading-indentation\
-                   -fgcse-lm -fgcse-sm -fsched-spec-load -fsingle-precision-constant \
-                   -mcpu=cortex-a57.cortex-a53 -mtune=cortex-a57.cortex-a53 \
-		           -std=gnu89
-
-KBUILD_CFLAGS	+= -march=armv8-a+crc --param l1-cache-size=32 --param l1-cache-line-size=32 --param l2-cache-size=2048 -Wno-unused-const-variable -Wno-error=return-local-addr
-
-# Snapdragon 820 doesn't need 835769/843419 erratum fixes
-# some toolchain enables those fixes automatically, so opt-out
-KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
-KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
-LDFLAGS_vmlinux	+= $(call ld-option, --no-fix-cortex-a53-835769)
-LDFLAGS_vmlinux	+= $(call ld-option, --no-fix-cortex-a53-843419)
-LDFLAGS_MODULE	+= $(call ld-option, --no-fix-cortex-a53-835769)
-LDFLAGS_MODULE	+= $(call ld-option, --no-fix-cortex-a53-843419)
-LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-835769)
-LDFLAGS		+= $(call ld-option, --no-fix-cortex-a53-843419)
+KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+		   -fno-strict-aliasing -fno-common \
+		   -Werror-implicit-function-declaration \
+		   -Wno-format-security \
+		   -fno-delete-null-pointer-checks \
+		   -std=gnu89 -Wno-format-truncation -Wno-bool-operation \
+		   -Wno-memset-elt-size -Wno-format-overflow -fno-store-merging
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -445,7 +428,7 @@ export MAKE AWK GENKSYMS INSTALLKERNEL PERL PYTHON UTS_MACHINE
 export HOSTCXX HOSTCXXFLAGS LDFLAGS_MODULE CHECK CHECKFLAGS
 
 export KBUILD_CPPFLAGS NOSTDINC_FLAGS LINUXINCLUDE OBJCOPYFLAGS LDFLAGS
-export KBUILD_CFLAGS CFLAGS_KERNEL CFLAGS_MODULE CFLAGS_GCOV CFLAGS_KCOV CFLAGS_KASAN CFLAGS_UBSAN
+export KBUILD_CFLAGS CFLAGS_KERNEL CFLAGS_MODULE CFLAGS_GCOV CFLAGS_KASAN
 export KBUILD_AFLAGS AFLAGS_KERNEL AFLAGS_MODULE
 export KBUILD_AFLAGS_MODULE KBUILD_CFLAGS_MODULE KBUILD_LDFLAGS_MODULE
 export KBUILD_AFLAGS_KERNEL KBUILD_CFLAGS_KERNEL
@@ -633,8 +616,6 @@ all: vmlinux
 include $(srctree)/arch/$(SRCARCH)/Makefile
 
 KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
-KBUILD_CFLAGS	+= $(call cc-disable-warning,array-bounds,)
-KBUILD_CFLAGS	+= $(call cc-disable-warning,maybe-uninitialized,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
 KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
@@ -646,10 +627,6 @@ KBUILD_CFLAGS	+= -O3
 KBUILD_CFLAGS += $(call cc-disable-warning,maybe-uninitialized)
 KBUILD_CFLAGS += $(call cc-disable-warning,array-bounds)
 endif
-
-KBUILD_CFLAGS 	+= $(call cc-disable-warning,maybe-uninitialized,) \
-		   $(call cc-disable-warning,unused-variable,) \
-		   $(call cc-disable-warning,unused-function)
 
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
@@ -704,14 +681,6 @@ else
 endif
 endif
 KBUILD_CFLAGS += $(stackp-flag)
-
-ifdef CONFIG_KCOV
-  ifeq ($(call cc-option, $(CFLAGS_KCOV)),)
-    $(warning Cannot use CONFIG_KCOV: \
-             -fsanitize-coverage=trace-pc is not supported by compiler)
-    CFLAGS_KCOV =
-  endif
-endif
 
 ifeq ($(COMPILER),clang)
 KBUILD_CPPFLAGS += $(call cc-option,-Qunused-arguments,)
