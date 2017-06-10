@@ -12,24 +12,24 @@ clear
 THREAD="-j$(grep -c ^processor /proc/cpuinfo)"
 KERNEL="Image"
 DTBIMAGE="dtb"
-export CROSS_COMPILE=${HOME}/android/uberbuild/out/aarch64-linux-android-6.x/bin/aarch64-linux-android-
-DEFCONFIG="sharkey_defconfig"
+export CROSS_COMPILE=${HOME}/tipsy/prebuilts/gcc/linux-x86/aarch64/aarch64-8.0/bin/aarch64-
+DEFCONFIG="fuckery_defconfig"
 
 # Kernel Details
-VER=".R1.marlin"
+VER=".get-fucked"
 
 # Paths
 KERNEL_DIR=`pwd`
-REPACK_DIR="${HOME}/android/AnyKernel2"
-PATCH_DIR="${HOME}/android/AnyKernel2/patch"
-MODULES_DIR="${HOME}/android/AnyKernel2/modules"
-ZIP_MOVE="${HOME}/android/AK-releases"
-ZIMAGE_DIR="${HOME}/android/marlin/arch/arm64/boot/"
+REPACK_DIR="${HOME}/AnyKernel"
+PATCH_DIR="${HOME}/AnyKernel/patch"
+MODULES_DIR="${HOME}/AnyKernel/modules"
+ZIP_MOVE="${HOME}/fuckery"
+ZIMAGE_DIR="${HOME}/tipsy/kernel/google/marlin/arch/arm64/boot/"
 
 # Functions
 function clean_all {
 		rm -rf $MODULES_DIR/*
-		cd ~/android/marlin/out/kernel
+		#cd ~/android/marlin/out/kernel
 		rm -rf $DTBIMAGE
 		git reset --hard > /dev/null 2>&1
 		git clean -f -d > /dev/null 2>&1
@@ -55,12 +55,12 @@ function make_dtb {
 }
 
 function make_boot {
-		cp -vr $ZIMAGE_DIR/Image.gz-dtb ~/android/AnyKernel2/zImage
+		cp -vr $ZIMAGE_DIR/Image.gz-dtb ~/AnyKernel/zImage
 }
 
 
 function make_zip {
-		cd ~/android/AnyKernel2
+		cd ~/AnyKernel
 		zip -r9 `echo $AK_VER`.zip *
 		mv  `echo $AK_VER`.zip $ZIP_MOVE
 		cd $KERNEL_DIR
@@ -72,20 +72,20 @@ DATE_START=$(date +"%s")
 
 echo -e "${green}"
 echo "-----------------"
-echo "Making sharkey Kernel:"
+echo "Making fuckery Kernel:"
 echo "-----------------"
 echo -e "${restore}"
 
 
 # Vars
-BASE_AK_VER="Sharkey"
+BASE_AK_VER="fuckery"
 AK_VER="$BASE_AK_VER$VER"
 export LOCALVERSION=~`echo $AK_VER`
 export LOCALVERSION=~`echo $AK_VER`
 export ARCH=arm64
 export SUBARCH=arm64
-export KBUILD_BUILD_USER=DespairFactor
-export KBUILD_BUILD_HOST=DarkRoom
+export KBUILD_BUILD_USER=dustin
+export KBUILD_BUILD_HOST=Area-51
 
 echo
 
