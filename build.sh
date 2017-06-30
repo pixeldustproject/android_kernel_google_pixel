@@ -1,5 +1,5 @@
 #!/bin/bash
-
+rm .version
 # Bash Color
 green='\033[01;32m'
 red='\033[01;31m'
@@ -9,150 +9,130 @@ restore='\033[0m'
 clear
 
 # Resources
-THREAD="-j$(grep -c ^processor /proc/cpuinfo)"
-KERNEL="Image.gz-dtb"
-DEFCONFIG="hells_defconfig"
+THREAD="-j26"
+KERNEL="Image"
+DTBIMAGE="dtb"
+export CROSS_COMPILE=${HOME}/tipsy/prebuilts/gcc/linux-x86/aarch64/aarch64-8.0/bin/aarch64-
+DEFCONFIG="fuckery_defconfig"
 
 # Kernel Details
-BASE_HC_VER="hC"
-VER="-Alpha-1.9-gcc6"
-HC_VER="$BASE_HC_VER$VER"
-
-# Vars
-export LOCALVERSION=-`echo $HC_VER`
-export ARCH=arm64
-export SUBARCH=arm64
+VER=".pissel-1.0-upstream"
 
 # Paths
 KERNEL_DIR=`pwd`
-REPACK_DIR="${HOME}/Android/Kernel/hC-PXL-AnyKernel2"
-ZIP_MOVE="${HOME}/Android/Kernel/hC-releases/PXL"
-ZIMAGE_DIR="${HOME}/Android/Kernel/hells-Core-PXL/arch/arm64/boot"
-DB_FOLDER="${HOME}/Dropbox/Kernel-Betas/PXL"
+REPACK_DIR="${HOME}/AnyKernel"
+PATCH_DIR="${HOME}/AnyKernel/patch"
+MODULES_DIR="${HOME}/AnyKernel/modules"
+ZIP_MOVE="${HOME}/fuckery"
+ZIMAGE_DIR="${HOME}/pissel/arch/arm64/boot"
 
 # Functions
 function clean_all {
-		rm -rf $REPACK_DIR/kernel/zImage
-		rm -rf $ZIMAGE_DIR/$KERNEL
+		rm -rf $MODULES_DIR/*
+		#cd ~/android/marlin/out/kernel
+		rm -rf $DTBIMAGE
+		git reset --hard > /dev/null 2>&1
+		git clean -f -d > /dev/null 2>&1
+		cd $KERNEL_DIR
+		echo
 		make clean && make mrproper
 }
 
 function make_kernel {
+		echo
 		make $DEFCONFIG
 		make $THREAD
-		cp -vr $ZIMAGE_DIR/$KERNEL $REPACK_DIR
-		mv $REPACK_DIR/$KERNEL $REPACK_DIR/zImage
+
 }
+
+function make_modules {
+		rm `echo $MODULES_DIR"/*"`
+		find $KERNEL_DIR -name '*.ko' -exec cp -v {} $MODULES_DIR \;
+}
+
+function make_dtb {
+		$REPACK_DIR/tools/dtbToolCM -2 -o $REPACK_DIR/$DTBIMAGE -s 2048 -p scripts/dtc/ arch/arm64/boot/
+}
+
+function make_boot {
+		cp -vr $ZIMAGE_DIR/Image.gz-dtb ~/AnyKernel/zImage
+}
+
 
 function make_zip {
-		cd $REPACK_DIR
-		zip -9 -r `echo $HC_VER`.zip .
-		mv  `echo $HC_VER`.zip $ZIP_MOVE
+		cd ~/AnyKernel
+		zip -r9 `echo $AK_VER`.zip *
+		mv  `echo $AK_VER`.zip $ZIP_MOVE
 		cd $KERNEL_DIR
 }
 
-function copy_dropbox {
-		cd $ZIP_MOVE
-		cp -vr  `echo $HC_VER`.zip $DB_FOLDER
-		cd $KERNEL_DIR
-}
 
 DATE_START=$(date +"%s")
 
-echo -e "${green}"
-echo "hC Kernel Creation Script:"
-echo
-
-echo "---------------"
-echo "Kernel Version:"
-echo "---------------"
-
-echo -e "${red}"; echo -e "${blink_red}"; echo "$HC_VER"; echo -e "${restore}";
 
 echo -e "${green}"
 echo "-----------------"
-echo "Making hC Kernel:"
+echo "Making fuckery Kernel:"
 echo "-----------------"
 echo -e "${restore}"
 
-while read -p "Please choose your option: [1]clean-build / [2]dirty-build / [3]zip-only / [4]abort " cchoice
+
+# Vars
+BASE_AK_VER="fuckery"
+AK_VER="$BASE_AK_VER$VER"
+export LOCALVERSION=~`echo $AK_VER`
+export LOCALVERSION=~`echo $AK_VER`
+export ARCH=arm64
+export SUBARCH=arm64
+export KBUILD_BUILD_USER=dustin
+export KBUILD_BUILD_HOST=Area-51
+
+echo
+
+while read -p "Do you want to clean stuffs (y/n)? " cchoice
 do
 case "$cchoice" in
-	1 )
-		echo -e "${green}"
-		echo
-		echo "[..........Cleaning up..........]"
-		echo
-		echo -e "${restore}"
+	y|Y )
 		clean_all
-		echo -e "${green}"
 		echo
-		echo "[....Building `echo $HC_VER`....]"
-		echo
-		echo -e "${restore}"
-		make_kernel
-		echo -e "${green}"
-		echo
-		echo "[....Make `echo $HC_VER`.zip....]"
-		echo
-		echo -e "${restore}"
-		make_zip
-		echo -e "${green}"
-		echo
-		echo "[.....Moving `echo $HC_VER`.....]"
-		echo
-		echo -e "${restore}"
-		copy_dropbox
+		echo "All Cleaned now."
 		break
 		;;
-	2 )
-		echo -e "${green}"
-		echo
-		echo "[....Building `echo $HC_VER`....]"
-		echo
-		echo -e "${restore}"
-		make_kernel
-		echo -e "${green}"
-		echo
-		echo "[....Make `echo $HC_VER`.zip....]"
-		echo
-		echo -e "${restore}"
-		make_zip
-		echo -e "${green}"
-		echo
-		echo "[.....Moving `echo $HC_VER`.....]"
-		echo
-		echo -e "${restore}"
-		copy_dropbox
-		break
-		;;
-	3 )
-		echo -e "${green}"
-		echo
-		echo "[....Make `echo $HC_VER`.zip....]"
-		echo
-		echo -e "${restore}"
-		make_zip
-		echo -e "${green}"
-		echo
-		echo "[.....Moving `echo $HC_VER`.....]"
-		echo
-		echo -e "${restore}"
-		copy_dropbox
-		break
-		;;
-	4 )
+	n|N )
 		break
 		;;
 	* )
-		echo -e "${red}"
 		echo
 		echo "Invalid try again!"
 		echo
-		echo -e "${restore}"
 		;;
 esac
 done
+
+echo
+
+while read -p "Do you want to build?" dchoice
+do
+case "$dchoice" in
+	y|Y )
+		make_kernel
+		make_dtb
+		make_modules
+		make_boot
+		make_zip
+		break
+		;;
+	n|N )
+		break
+		;;
+	* )
+		echo
+		echo "Invalid try again!"
+		echo
+		;;
+esac
+done
+
 
 echo -e "${green}"
 echo "-------------------"
@@ -164,4 +144,3 @@ DATE_END=$(date +"%s")
 DIFF=$(($DATE_END - $DATE_START))
 echo "Time: $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds."
 echo
-
